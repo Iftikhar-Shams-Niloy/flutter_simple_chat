@@ -10,6 +10,8 @@ class AuthScreen extends StatefulWidget {
 }
 
 class _AushScreenState extends State<AuthScreen> {
+  var _isLogin = true;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -41,7 +43,7 @@ class _AushScreenState extends State<AuthScreen> {
                         children: [
                           TextFormField(
                             decoration: const InputDecoration(
-                              labelText: "Email Address"
+                              labelText: "Email Address",
                             ),
                             keyboardType: TextInputType.emailAddress,
                             autocorrect: false,
@@ -50,11 +52,34 @@ class _AushScreenState extends State<AuthScreen> {
 
                           TextFormField(
                             decoration: const InputDecoration(
-                              labelText: "Password"
+                              labelText: "Password",
                             ),
                             autocorrect: false,
                             obscureText: true,
                             textCapitalization: TextCapitalization.none,
+                          ),
+
+                          const SizedBox(height: 12),
+
+                          ElevatedButton(
+                            onPressed: () {},
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                            ),
+                            child: Text(_isLogin ? "Log IN" : "Sign UP"),
+                          ),
+
+                          TextButton(
+                            onPressed: () {
+                              setState(() {
+                                _isLogin = !_isLogin;
+                              });
+                            },
+                            child: Text(
+                              _isLogin
+                                  ? "Create an account"
+                                  : "Already have an account? Click here.",
+                            ),
                           ),
                         ],
                       ),
