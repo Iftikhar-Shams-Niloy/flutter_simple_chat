@@ -10,7 +10,21 @@ class AuthScreen extends StatefulWidget {
 }
 
 class _AushScreenState extends State<AuthScreen> {
+  final _form = GlobalKey<FormState>();
+
   var _isLogin = true;
+  var _enteredEmail = "";
+  var _enteredPassword = "";
+
+  void _submit() {
+    final isValid = _form.currentState!.validate();
+
+    if (isValid) {
+      _form.currentState!.save();
+      print(_enteredEmail);
+      print(_enteredPassword);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,6 +52,7 @@ class _AushScreenState extends State<AuthScreen> {
                   child: Padding(
                     padding: const EdgeInsetsGeometry.all(16),
                     child: Form(
+                      key: _form,
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -48,6 +63,18 @@ class _AushScreenState extends State<AuthScreen> {
                             keyboardType: TextInputType.emailAddress,
                             autocorrect: false,
                             textCapitalization: TextCapitalization.none,
+                            validator: (value) {
+                              if (value == null ||
+                                  value.trim().isEmpty ||
+                                  !value.contains("@")) {
+                                return "Your email address is invalid!";
+                              } else {
+                                return null;
+                              }
+                            },
+                            onSaved: (value) {
+                              _enteredEmail = value!;
+                            },
                           ),
 
                           TextFormField(
@@ -57,14 +84,26 @@ class _AushScreenState extends State<AuthScreen> {
                             autocorrect: false,
                             obscureText: true,
                             textCapitalization: TextCapitalization.none,
+                            validator: (pass) {
+                              if (pass == null || pass.trim().length < 6) {
+                                return "Password too short!";
+                              } else {
+                                return null;
+                              }
+                            },
+                            onSaved: (pass) {
+                              _enteredPassword = pass!;
+                            },
                           ),
 
                           const SizedBox(height: 12),
 
                           ElevatedButton(
-                            onPressed: () {},
+                            onPressed: _submit,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                              backgroundColor: Theme.of(
+                                context,
+                              ).colorScheme.primaryContainer,
                             ),
                             child: Text(_isLogin ? "Log IN" : "Sign UP"),
                           ),
