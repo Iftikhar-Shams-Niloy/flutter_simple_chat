@@ -42,21 +42,6 @@ class _AushScreenState extends State<AuthScreen> {
           email: _enteredEmail,
           password: _enteredPassword,
         );
-
-        if (!userCredentials.user!.emailVerified) {
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).clearSnackBars();
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text("Please verify your email before logging in."),
-            ),
-          );
-          await _firebase.signOut();
-          setState(() {
-            _isLoading = false;
-          });
-          return;
-        }
       } else {
         final userCredentials = await _firebase.createUserWithEmailAndPassword(
           email: _enteredEmail,
@@ -69,26 +54,11 @@ class _AushScreenState extends State<AuthScreen> {
             .doc(userCredentials.user!.uid)
             .set({"username": _enteredUsername, "email": _enteredEmail});
 
-        await userCredentials.user!.sendEmailVerification();
-
         if (!mounted) return;
         ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              "Account created! Please verify your email to log in.",
-            ),
-          ),
+          const SnackBar(content: Text("Account created successfully!")),
         );
-
-        await _firebase.signOut();
-
-        _form.currentState!.reset();
-        setState(() {
-          _isLogin = true;
-          _isLoading = false;
-        });
-        return;
       }
     } on FirebaseAuthException catch (error) {
       if (!mounted) return;
