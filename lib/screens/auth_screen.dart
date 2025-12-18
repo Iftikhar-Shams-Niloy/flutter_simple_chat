@@ -1,7 +1,7 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';
-import '../firebase_options.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_simple_chat/widgets/user_image_picker.dart';
 
 final _firebase = FirebaseAuth.instance;
 
@@ -20,32 +20,109 @@ class _AushScreenState extends State<AuthScreen> {
   var _isLogin = true;
   var _enteredEmail = "";
   var _enteredPassword = "";
+  var _enteredUsername = "";
+  var _isLoading = false;
 
-  void _submit() async {
+  Future<void> _submit() async {
     final isValid = _form.currentState!.validate();
 
     if (!isValid) {
       return;
-    } else {
-      _form.currentState!.save();
-      try {
-        if (_isLogin) {
-          final userCredentials = await _firebase.signInWithEmailAndPassword(
-            email: _enteredEmail,
-            password: _enteredPassword,
+    }
+
+    _form.currentState!.save();
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      if (_isLogin) {
+        final userCredentials = await _firebase.signInWithEmailAndPassword(
+          email: _enteredEmail,
+          password: _enteredPassword,
+        );
+
+        if (!userCredentials.user!.emailVerified) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).clearSnackBars();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Please verify your email before logging in."),
+            ),
           );
-        } else {
-          final userCredentials = await _firebase
-              .createUserWithEmailAndPassword(
-                email: _enteredEmail,
-                password: _enteredPassword,
-              );
+          await _firebase.signOut();
+          setState(() {
+            _isLoading = false;
+          });
+          return;
         }
-      } on FirebaseAuthException catch (error) {
+      } else {
+        final userCredentials = await _firebase.createUserWithEmailAndPassword(
+          email: _enteredEmail,
+          password: _enteredPassword,
+        );
+
+        // Save username to Firestore
+        await FirebaseFirestore.instance
+            .collection("users")
+            .doc(userCredentials.user!.uid)
+            .set({"username": _enteredUsername, "email": _enteredEmail});
+
+        await userCredentials.user!.sendEmailVerification();
+
+        if (!mounted) return;
         ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(error.message ?? "Authentication Error!")),
+          const SnackBar(
+            content: Text(
+              "Account created! Please verify your email to log in.",
+            ),
+          ),
         );
+
+        await _firebase.signOut();
+
+        _form.currentState!.reset();
+        setState(() {
+          _isLogin = true;
+          _isLoading = false;
+        });
+        return;
+      }
+    } on FirebaseAuthException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).clearSnackBars();
+
+      String errorMessage = "Authentication Error!";
+      if (error.code == 'email-already-in-use') {
+        errorMessage = "This email is already in use.";
+      } else if (error.code == 'weak-password') {
+        errorMessage = "Password is too weak.";
+      } else if (error.code == 'invalid-email') {
+        errorMessage = "Invalid email address.";
+      } else if (error.code == 'user-not-found') {
+        errorMessage = "No account found with this email.";
+      } else if (error.code == 'wrong-password') {
+        errorMessage = "Wrong password.";
+      } else {
+        errorMessage = error.message ?? "Authentication Error!";
+      }
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(errorMessage)));
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("An unexpected error occurred.")),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
       }
     }
   }
@@ -80,6 +157,26 @@ class _AushScreenState extends State<AuthScreen> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
+                          if (!_isLogin) UserImagePicker(),
+                          if (!_isLogin)
+                            TextFormField(
+                              decoration: const InputDecoration(
+                                labelText: "Username",
+                              ),
+                              enableSuggestions: false,
+                              validator: (value) {
+                                if (value == null ||
+                                    value.isEmpty ||
+                                    value.trim().length < 4) {
+                                  return "Please enter at least 4 characters";
+                                } else {
+                                  return null;
+                                }
+                              },
+                              onSaved: (value) {
+                                _enteredUsername = value!;
+                              },
+                            ),
                           TextFormField(
                             decoration: const InputDecoration(
                               labelText: "Email Address",
@@ -122,28 +219,32 @@ class _AushScreenState extends State<AuthScreen> {
 
                           const SizedBox(height: 12),
 
-                          ElevatedButton(
-                            onPressed: _submit,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Theme.of(
-                                context,
-                              ).colorScheme.primaryContainer,
+                          if (_isLoading)
+                            const CircularProgressIndicator()
+                          else
+                            ElevatedButton(
+                              onPressed: _submit,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Theme.of(
+                                  context,
+                                ).colorScheme.primaryContainer,
+                              ),
+                              child: Text(_isLogin ? "Log IN" : "Sign UP"),
                             ),
-                            child: Text(_isLogin ? "Log IN" : "Sign UP"),
-                          ),
 
-                          TextButton(
-                            onPressed: () {
-                              setState(() {
-                                _isLogin = !_isLogin;
-                              });
-                            },
-                            child: Text(
-                              _isLogin
-                                  ? "Create an account"
-                                  : "Already have an account? Click here.",
+                          if (!_isLoading)
+                            TextButton(
+                              onPressed: () {
+                                setState(() {
+                                  _isLogin = !_isLogin;
+                                });
+                              },
+                              child: Text(
+                                _isLogin
+                                    ? "Create an account"
+                                    : "Already have an account? Click here.",
+                              ),
                             ),
-                          ),
                         ],
                       ),
                     ),

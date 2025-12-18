@@ -26,7 +26,12 @@ class MyApp extends StatelessWidget {
             return const SplashScreen();
           }
           if (snapshot.hasData) {
-            return ChatScreen();
+            final user = snapshot.data as User;
+            if (user.emailVerified) {
+              return ChatScreen();
+            } else {
+              return const AuthScreen();
+            }
           } else {
             return const AuthScreen();
           }
