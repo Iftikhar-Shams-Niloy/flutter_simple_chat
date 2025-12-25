@@ -25,10 +25,20 @@ class ChatMessages extends StatelessWidget {
 
         return ListView.builder(
           padding: const EdgeInsets.only(bottom: 40),
-          itemCount: loadedMessages.length,
           reverse: true,
+          itemCount: loadedMessages.length,
           itemBuilder: (ctx, index) {
             final messageData = loadedMessages[index].data();
+            final nextChatMessage = index + 1 < loadedMessages.length
+                ? loadedMessages[index + 1].data()
+                : null;
+
+            final currentMessageUserId = messageData['username'];
+            final nextMessageUserId = nextChatMessage != null
+                ? nextChatMessage['username']
+                : null;
+            final nextUserIsSame = nextMessageUserId == currentMessageUserId;
+
             return MessageContainerWidget(message: messageData);
           },
         );
