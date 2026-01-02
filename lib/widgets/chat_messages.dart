@@ -32,9 +32,9 @@ class ChatMessages extends StatelessWidget {
             final messageData = loadedMessages[index].data();
             final currentMessageUserId = messageData['userId'];
             final currentUser = FirebaseAuth.instance.currentUser!;
-            final _isMe = currentMessageUserId == currentUser.uid;
+            final isMyMessage = currentMessageUserId == currentUser.uid;
 
-            return MessageContainerWidget(message: messageData, isMe: _isMe);
+            return MessageContainerWidget(message: messageData, isMe: isMyMessage);
           },
         );
       },
